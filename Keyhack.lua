@@ -207,7 +207,7 @@ local function createKeyInput()
             wait(0.2)
             local success, errorMsg = pcall(function()
                 -- استبدل الرابط برابط السكربت الثاني على GitHub
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/YourRepo/YourScript/MainMenuUI.lua"))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/Rxwab/Hackkaboos_pro/main/Kabooshackpro.lua"))()
             end)
             if success then
                 print("Main Menu Loaded Successfully")
