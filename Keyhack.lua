@@ -1,236 +1,214 @@
--- سكربت واجهة إدخال المفتاح الفاخرة
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
--- دالة لإنشاء أنيميشن الخط المتحرك
-local function createBorderAnimation(parent, borderColor)
-    local Border = Instance.new("Frame")
-    Border.Size = UDim2.new(1, 4, 1, 4)
-    Border.Position = UDim2.new(0, -2, 0, -2)
-    Border.BackgroundTransparency = 1
-    Border.Parent = parent
+-- إعدادات المفتاح
+local KEY_PREFIX = "FREE_"
+local SCRIPT_DURATION = 600 -- 10 دقائق
+local keyActivated = false
+local scriptExpired = false
 
-    local Top = Instance.new("Frame")
-    Top.Size = UDim2.new(0, 0, 0, 4)
-    Top.Position = UDim2.new(0, 0, 0, -2)
-    Top.BackgroundColor3 = borderColor
-    Top.Parent = Border
+-- رابط القائمة الثانية (ScriptsUI.lua) من GitHub
+local SCRIPTS_UI_URL = "https://raw.githubusercontent.com/YourUsername/Kaboos-ScriptsUI/main/ScriptsUI.lua" -- استبدل بالرابط الحقيقي
 
-    local Bottom = Instance.new("Frame")
-    Bottom.Size = UDim2.new(0, 0, 0, 4)
-    Bottom.Position = UDim2.new(1, 0, 1, -2)
-    Bottom.BackgroundColor3 = borderColor
-    Bottom.Parent = Border
+-- تخزين كلمات السر المؤقتة
+local keyCache = {}
 
-    local Left = Instance.new("Frame")
-    Left.Size = UDim2.new(0, 4, 0, 0)
-    Left.Position = UDim2.new(0, -2, 0, 0)
-    Left.BackgroundColor3 = borderColor
-    Left.Parent = Border
-
-    local Right = Instance.new("Frame")
-    Right.Size = UDim2.new(0, 4, 0, 0)
-    Right.Position = UDim2.new(1, -2, 1, 0)
-    Right.BackgroundColor3 = borderColor
-    Right.Parent = Border
-
-    local function animateBorder()
-        while true do
-            TweenService:Create(Top, TweenInfo.new(1, Enum.EasingStyle.Sine), {Size = UDim2.new(1, 0, 0, 4)}):Play()
-            wait(1)
-            TweenService:Create(Right, TweenInfo.new(1, Enum.EasingStyle.Sine), {Size = UDim2.new(0, 4, 1, 0)}):Play()
-            wait(1)
-            TweenService:Create(Bottom, TweenInfo.new(1, Enum.EasingStyle.Sine), {Size = UDim2.new(1, 0, 0, 4), Position = UDim2.new(0, 0, 1, -2)}):Play()
-            wait(1)
-            TweenService:Create(Left, TweenInfo.new(1, Enum.EasingStyle.Sine), {Size = UDim2.new(0, 4, 1, 0)}):Play()
-            wait(1)
-            TweenService:Create(Top, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {Size = UDim2.new(0, 0, 0, 4)}):Play()
-            TweenService:Create(Right, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {Size = UDim2.new(0, 4, 0, 0)}):Play()
-            TweenService:Create(Bottom, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {Size = UDim2.new(0, 0, 0, 4)}):Play()
-            TweenService:Create(Left, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {Size = UDim2.new(0, 4, 0, 0)}):Play()
-            wait(0.5)
-        end
+-- التحقق من كلمة السر
+local function validateKey(key)
+    if keyCache[key] then
+        return true
     end
-    spawn(animateBorder)
+    if string.sub(key, 1, #KEY_PREFIX) == KEY_PREFIX then
+        keyCache[key] = true
+        return true
+    end
+    return false
 end
 
--- دالة لإنشاء واجهة إدخال المفتاح
-local function createKeyInput()
-    print("Creating KeyInput UI")
+-- إنشاء رابط مخصص لكل لاعب
+local function generateCustomLink()
+    local uniqueId = HttpService:GenerateGUID(false)
+    return "https://rxwab.github.io/Kaboos_CodeGenerator/?user=" .. LocalPlayer.UserId .. "&id=" .. uniqueId
+end
+
+-- واجهة تسجيل المفتاح
+local function createFirstUI()
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Parent = PlayerGui
-    ScreenGui.Name = "KeyInputUI"
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.Name = "KaboosHackUI"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local Background = Instance.new("Frame")
+    Background.Size = UDim2.new(1, 0, 1, 0)
+    Background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Background.BackgroundTransparency = 0.7
+    Background.Parent = ScreenGui
 
     local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 350, 0, 250)
-    Frame.Position = UDim2.new(0.5, -175, 0.5, -125)
-    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Frame.Size = UDim2.new(0, 450, 0, 400)
+    Frame.Position = UDim2.new(0.5, -225, 0.5, -200)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Frame.BackgroundTransparency = 0.1
+    Frame.BorderSizePixel = 0
     Frame.Parent = ScreenGui
-    Frame.Visible = true
 
-    local Gradient = Instance.new("UIGradient")
-    Gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 20)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 50))
-    })
-    Gradient.Parent = Frame
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 20)
+    UICorner.Parent = Frame
 
-    local FrameCorner = Instance.new("UICorner")
-    FrameCorner.CornerRadius = UDim.new(0, 12)
-    FrameCorner.Parent = Frame
-
-    createBorderAnimation(Frame, Color3.fromRGB(255, 0, 0))
-
+    -- عنوان متحرك
     local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 40)
-    Title.Text = "أدخل المفتاح الفاخر"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.GothamBlack
+    Title.Size = UDim2.new(1, 0, 0, 60)
+    Title.Position = UDim2.new(0, 0, 0, 20)
+    Title.Text = "💀 هاك كابوس الأسطوري 💀"
+    Title.TextColor3 = Color3.fromRGB(0, 255, 0)
     Title.TextScaled = true
     Title.BackgroundTransparency = 1
-    Title.TextStrokeTransparency = 0.8
-    Title.TextStrokeColor3 = Color3.fromRGB(255, 0, 0)
+    Title.Font = Enum.Font.GothamBlack
     Title.Parent = Frame
 
-    local WebsiteButton = Instance.new("TextButton")
-    WebsiteButton.Size = UDim2.new(0.8, 0, 0, 30)
-    WebsiteButton.Position = UDim2.new(0.1, 0, 0.15, 0)
-    WebsiteButton.Text = "انسخ رابط الموقع"
-    WebsiteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    WebsiteButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    WebsiteButton.Font = Enum.Font.Gotham
-    WebsiteButton.TextScaled = true
-    WebsiteButton.Parent = Frame
+    local function animateTitle()
+        local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+        local tween = TweenService:Create(Title, tweenInfo, {TextTransparency = 0.3})
+        tween:Play()
+    end
+    animateTitle()
 
-    local WebsiteButtonCorner = Instance.new("UICorner")
-    WebsiteButtonCorner.CornerRadius = UDim.new(0, 8)
-    WebsiteButtonCorner.Parent = WebsiteButton
+    -- نص الرابط المخصص
+    local LinkLabel = Instance.new("TextLabel")
+    LinkLabel.Size = UDim2.new(0.9, 0, 0, 40)
+    LinkLabel.Position = UDim2.new(0.05, 0, 0, 90)
+    LinkLabel.Text = "انقر لنسخ رابط مفتاحك الخاص 🔗"
+    LinkLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    LinkLabel.TextScaled = true
+    LinkLabel.BackgroundTransparency = 1
+    LinkLabel.Font = Enum.Font.SourceSansBold
+    LinkLabel.Parent = Frame
 
-    WebsiteButton.MouseEnter:Connect(function()
-        TweenService:Create(WebsiteButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 150, 255)}):Play()
+    local LinkGlow = Instance.new("UIStroke")
+    LinkGlow.Thickness = 2
+    LinkGlow.Color = Color3.fromRGB(0, 255, 0)
+    LinkGlow.Parent = LinkLabel
+
+    -- إشعار النسخ
+    local CopyNotification = Instance.new("TextLabel")
+    Bahrain.Size = UDim2.new(0.9, 0, 0, 30)
+    CopyNotification.Position = UDim2.new(0.05, 0, 0, 130)
+    CopyNotification.Text = ""
+    CopyNotification.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CopyNotification.TextScaled = true
+    CopyNotification.BackgroundTransparency = 1
+    CopyNotification.Font = Enum.Font.SourceSans
+    CopyNotification.Parent = Frame
+
+    LinkLabel.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local link = generateCustomLink()
+            setclipboard(link)
+            CopyNotification.Text = "تم نسخ رابط المفتاح!"
+            wait(2)
+            CopyNotification.Text = ""
+        end
     end)
-    WebsiteButton.MouseLeave:Connect(function()
-        TweenService:Create(WebsiteButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 120, 255)}):Play()
-    end)
 
-    local YoutubeButton = Instance.new("TextButton")
-    YoutubeButton.Size = UDim2.new(0.8, 0, 0, 30)
-    YoutubeButton.Position = UDim2.new(0.1, 0, 0.25, 0)
-    YoutubeButton.Text = "انسخ رابط قناة يوتيوب"
-    YoutubeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    YoutubeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    YoutubeButton.Font = Enum.Font.Gotham
-    YoutubeButton.TextScaled = true
-    YoutubeButton.Parent = Frame
-
-    local YoutubeButtonCorner = Instance.new("UICorner")
-    YoutubeButtonCorner.CornerRadius = UDim.new(0, 8)
-    YoutubeButtonCorner.Parent = YoutubeButton
-
-    YoutubeButton.MouseEnter:Connect(function()
-        TweenService:Create(YoutubeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 50, 50)}):Play()
-    end)
-    YoutubeButton.MouseLeave:Connect(function()
-        TweenService:Create(YoutubeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
-    end)
-
+    -- مربع إدخال المفتاح
     local KeyInput = Instance.new("TextBox")
-    KeyInput.Size = UDim2.new(0.8, 0, 0, 40)
-    KeyInput.Position = UDim2.new(0.1, 0, 0.4, 0)
+    KeyInput.Size = UDim2.new(0.8, 0, 0, 50)
+    KeyInput.Position = UDim2.new(0.1, 0, 0, 170)
     KeyInput.Text = ""
+    KeyInput.PlaceholderText = "أدخل مفتاحك (يبدأ بـ FREE_)"
     KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KeyInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    KeyInput.Font = Enum.Font.Gotham
+    KeyInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     KeyInput.TextScaled = true
-    KeyInput.PlaceholderText = "اكتب المفتاح (يبدأ بـ FREE_)"
+    KeyInput.Font = Enum.Font.SourceSans
     KeyInput.Parent = Frame
 
     local KeyInputCorner = Instance.new("UICorner")
-    KeyInputCorner.CornerRadius = UDim.new(0, 8)
+    KeyInputCorner.CornerRadius = UDim.new(0, 12)
     KeyInputCorner.Parent = KeyInput
 
-    local SubmitButton = Instance.new("TextButton")
-    SubmitButton.Size = UDim2.new(0.8, 0, 0, 40)
-    SubmitButton.Position = UDim2.new(0.1, 0, 0.6, 0)
-    SubmitButton.Text = "تأكيد"
-    SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-    SubmitButton.Font = Enum.Font.GothamBold
-    SubmitButton.TextScaled = true
-    SubmitButton.Parent = Frame
+    -- إشعار الخطأ
+    local ErrorLabel = Instance.new("TextLabel")
+    ErrorLabel.Size = UDim2.new(0.9, 0, 0, 30)
+    ErrorLabel.Position = UDim2.new(0.05, 0, 0, 230)
+    ErrorLabel.Text = ""
+    ErrorLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    ErrorLabel.TextScaled = true
+    ErrorLabel.BackgroundTransparency = 1
+    ErrorLabel.Font = Enum.Font.SourceSans
+    ErrorLabel.Parent = Frame
 
-    local SubmitButtonCorner = Instance.new("UICorner")
-    SubmitButtonCorner.CornerRadius = UDim.new(0, 8)
-    SubmitButtonCorner.Parent = SubmitButton
+    -- زر التفعيل
+    local ActivateButton = Instance.new("TextButton")
+    ActivateButton.Size = UDim2.new(0.8, 0, 0, 60)
+    ActivateButton.Position = UDim2.new(0.1, 0, 0, 270)
+    ActivateButton.Text = "تفعيل الهاك [ ]"
+    ActivateButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActivateButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    ActivateButton.TextScaled = true
+    ActivateButton.Font = Enum.Font.GothamBold
+    ActivateButton.Parent = Frame
 
-    SubmitButton.MouseEnter:Connect(function()
-        TweenService:Create(SubmitButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 255, 0)}):Play()
-    end)
-    SubmitButton.MouseLeave:Connect(function()
-        TweenService:Create(SubmitButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 200, 0)}):Play()
-    end)
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 12)
+    ButtonCorner.Parent = ActivateButton
 
-    WebsiteButton.MouseButton1Click:Connect(function()
-        local url = "https://rxwab.github.io/Kaboos_CodeGenerator/?user=ym80eglpqj"
-        pcall(function()
-            setclipboard(url)
-            game.StarterGui:SetCore("SendNotification", {
-                Title = "تم النسخ",
-                Text = "رابط الموقع تم نسخه إلى الحافظة",
-                Duration = 3
-            })
-        end)
-    end)
-
-    YoutubeButton.MouseButton1Click:Connect(function()
-        local url = "https://www.youtube.com/@RX_MAR"
-        pcall(function()
-            setclipboard(url)
-            game.StarterGui:SetCore("SendNotification", {
-                Title = "تم النسخ",
-                Text = "رابط قناة يوتيوب تم نسخه إلى الحافظة",
-                Duration = 3
-            })
-        end)
-    end)
-
-    SubmitButton.MouseButton1Click:Connect(function()
-        print("Submit Button Clicked")
-        local enteredKey = KeyInput.Text
-        if enteredKey:match("^FREE_") then
-            print("Valid Key Entered")
+    ActivateButton.MouseButton1Click:Connect(function()
+        local inputKey = KeyInput.Text
+        if validateKey(inputKey) then
+            keyActivated = true
+            ActivateButton.Text = "تفعيل الهاك [✅]"
             ScreenGui:Destroy()
-            wait(0.2)
-            local success, errorMsg = pcall(function()
-                -- استبدل الرابط برابط السكربت الثاني على GitHub
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/Rxwab/Hackkaboos_pro/main/Kabooshackpro.lua"))()
+            -- تحميل وتنفيذ القائمة الثانية من GitHub
+            local success, err = pcall(function()
+                loadstring(game:HttpGet(SCRIPTS_UI_URL))()
             end)
-            if success then
-                print("Main Menu Loaded Successfully")
-                game.StarterGui:SetCore("SendNotification", {
-                    Title = "نجاح",
-                    Text = "المفتاح صحيح، القايمة الفاخرة ظهرت",
-                    Duration = 3
-                })
-            else
-                print("Failed to Load Main Menu: " .. tostring(errorMsg))
-                game.StarterGui:SetCore("SendNotification", {
-                    Title = "خطأ",
-                    Text = "فشل في تحميل القايمة: " .. tostring(errorMsg),
-                    Duration = 5
-                })
+            if not success then
+                warn("فشل تحميل القائمة الثانية:", err)
+                local ErrorGui = Instance.new("ScreenGui")
+                ErrorGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+                local ErrorFrame = Instance.new("Frame")
+                ErrorFrame.Size = UDim2.new(0, 300, 0, 150)
+                ErrorFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+                ErrorFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+                ErrorFrame.Parent = ErrorGui
+                local ErrorText = Instance.new("TextLabel")
+                ErrorText.Size = UDim2.new(1, 0, 1, 0)
+                ErrorText.Text = "فشل تحميل القائمة! تحقق من الرابط."
+                ErrorText.TextColor3 = Color3.fromRGB(255, 0, 0)
+                ErrorText.TextScaled = true
+                ErrorText.BackgroundTransparency = 1
+                ErrorText.Parent = ErrorFrame
             end
         else
-            print("Invalid Key Entered")
-            KeyInput.Text = ""
-            KeyInput.PlaceholderText = "مفتاح خاطئ، حاول مرة أخرى (يبدأ بـ FREE_)"
-        end)
+            ActivateButton.Text = "تفعيل الهاك [❌]"
+            ErrorLabel.Text = "مفتاح غير صالح! حاول مرة أخرى."
+            wait(2)
+            ErrorLabel.Text = ""
+        end
     end)
 end
 
--- بدء السكربت
-createKeyInput()
+-- إدارة انتهاء صلاحية المفتاح
+spawn(function()
+    while true do
+        if keyActivated then
+            wait(SCRIPT_DURATION)
+            scriptExpired = true
+            keyActivated = false
+            local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+            for _, gui in ipairs(playerGui:GetChildren()) do
+                if gui.Name == "ScriptsUI" or gui.Name == "CircleButtonUI" then
+                    gui:Destroy()
+                end
+            end
+            createFirstUI()
+        end
+        wait(1)
+    end
+end)
+
+-- تشغيل السكربت
+createFirstUI()
